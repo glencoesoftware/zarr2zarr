@@ -68,6 +68,7 @@ public class Convert implements Callable<Integer> {
 
   private ShardConfiguration shardConfig;
   private int[] requestedShard; // the requested size for custom sharding
+  private int[] requestedChunkSize;
   private String[] codecs;
 
   /**
@@ -121,6 +122,21 @@ public class Convert implements Callable<Integer> {
   )
   public void setWriteV2(boolean v2) {
     writeV2 = v2;
+  }
+
+  @Option(
+    names = "--chunk",
+    description = "'t,c,z,y,x' (optional comma-separated custom shard size)",
+    defaultValue = ""
+  )
+  public void setChunk(String chunk) {
+    if (chunk != null && !chunk.isEmpty()) {
+      String[] chunkSize = chunk.split(",");
+      requestedChunkSize = new int[chunkSize.length];
+      for (int i=0; i<chunkSize.length; i++) {
+        requestedChunkSize[i] = Integer.parseInt(chunkSize[i]);
+      }
+    }
   }
 
   @Option(
@@ -284,6 +300,9 @@ public class Convert implements Callable<Integer> {
             ZarrArray tile = field.openArray("/" + res);
             LOGGER.info("opened array {}", resolutionPath);
             int[] originalChunkSizes = tile.getChunks();
+            if (requestedChunkSize != null) {
+              originalChunkSizes = requestedChunkSize;
+            }
             int[] shape = tile.getShape();
 
             int[] chunkSizes = new int[originalChunkSizes.length];
